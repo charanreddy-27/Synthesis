@@ -1,28 +1,38 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import type { RunEvent } from "@/lib/events";
+import type { RunEvent, SourceCard } from "@/lib/events";
+import { Report } from "@/components/Report";
+import { SourceList } from "@/components/SourceList";
+import { ToolCallFeed, type ToolCallView } from "@/components/ToolCallFeed";
 
 type LaneStatus = "idle" | "active" | "done" | "error";
 
-interface ConsoleState {
-  status: LaneStatus;
-  text: string;
+interface RunState {
   provider: string | null;
+  researcher: { status: LaneStatus; label?: string };
+  synthesizer: { status: LaneStatus };
+  tools: ToolCallView[];
+  sources: SourceCard[];
+  report: string;
   error: string | null;
 }
 
-const INITIAL: ConsoleState = {
-  status: "idle",
-  text: "",
+const INITIAL: RunState = {
   provider: null,
+  researcher: { status: "idle" },
+  synthesizer: { status: "idle" },
+  tools: [],
+  sources: [],
+  report: "",
   error: null,
 };
 
 export function QuestionConsole({ defaultQuestion }: { defaultQuestion: string }) {
   const [question, setQuestion] = useState(defaultQuestion);
   const [running, setRunning] = useState(false);
-  const [state, setState] = useState<ConsoleState>(INITIAL);
+  const [state, setState] = useState<RunState>(INITIAL);
+  const [started, setStarted] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const handleEvent = useCallback((event: RunEvent) => {
@@ -30,14 +40,34 @@ export function QuestionConsole({ defaultQuestion }: { defaultQuestion: string }
       switch (event.type) {
         case "run_started":
           return { ...prev, provider: event.provider };
-        case "agent_status":
-          if (event.agent !== "synthesizer") return prev;
-          return { ...prev, status: event.status === "queued" ? "active" : event.status };
+        case "agent_status": {
+          const status: LaneStatus = event.status === "queued" ? "active" : event.status;
+          if (event.agent === "researcher")
+            return { ...prev, researcher: { status, label: event.label } };
+          if (event.agent === "synthesizer") return { ...prev, synthesizer: { status } };
+          return prev;
+        }
+        case "tool_call": {
+          const view: ToolCallView = {
+            id: event.id,
+            tool: event.tool,
+            input: event.input,
+            status: event.status,
+            detail: event.detail,
+          };
+          const idx = prev.tools.findIndex((t) => t.id === event.id);
+          const tools =
+            idx === -1 ? [...prev.tools, view] : prev.tools.map((t, i) => (i === idx ? view : t));
+          return { ...prev, tools };
+        }
+        case "source":
+          if (prev.sources.some((s) => s.id === event.source.id)) return prev;
+          return { ...prev, sources: [...prev.sources, event.source] };
         case "token":
           if (event.agent !== "synthesizer") return prev;
-          return { ...prev, text: prev.text + event.text };
+          return { ...prev, report: prev.report + event.text };
         case "error":
-          return { ...prev, status: "error", error: event.message };
+          return { ...prev, error: event.message };
         case "run_done":
         default:
           return prev;
@@ -50,7 +80,8 @@ export function QuestionConsole({ defaultQuestion }: { defaultQuestion: string }
     if (q.length < 3 || running) return;
 
     setRunning(true);
-    setState({ ...INITIAL, status: "active" });
+    setStarted(true);
+    setState({ ...INITIAL, researcher: { status: "active", label: "Searching the web" } });
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -62,21 +93,17 @@ export function QuestionConsole({ defaultQuestion }: { defaultQuestion: string }
         body: JSON.stringify({ question: q }),
         signal: controller.signal,
       });
-
       if (!res.ok || !res.body) {
-        const detail = await res.text().catch(() => "");
-        throw new Error(detail || `Request failed (${res.status})`);
+        throw new Error((await res.text().catch(() => "")) || `Request failed (${res.status})`);
       }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-
         let boundary: number;
         while ((boundary = buffer.indexOf("\n\n")) !== -1) {
           const frame = buffer.slice(0, boundary);
@@ -94,7 +121,6 @@ export function QuestionConsole({ defaultQuestion }: { defaultQuestion: string }
       if ((error as Error).name !== "AbortError") {
         setState((prev) => ({
           ...prev,
-          status: "error",
           error: error instanceof Error ? error.message : "Run failed",
         }));
       }
@@ -104,9 +130,7 @@ export function QuestionConsole({ defaultQuestion }: { defaultQuestion: string }
     }
   }, [question, running, handleEvent]);
 
-  const stop = useCallback(() => {
-    abortRef.current?.abort();
-  }, []);
+  const stop = useCallback(() => abortRef.current?.abort(), []);
 
   return (
     <section className="space-y-5">
@@ -117,9 +141,50 @@ export function QuestionConsole({ defaultQuestion }: { defaultQuestion: string }
         onStop={stop}
         running={running}
       />
-      <AgentLane state={state} running={running} />
+
+      {!started ? (
+        <IdlePanel />
+      ) : (
+        <>
+          <Lane
+            name="Researcher"
+            status={state.researcher.status}
+            label={state.researcher.label}
+            badge={state.provider ? badgeFor(state.provider) : undefined}
+          >
+            {state.tools.length === 0 ? (
+              <p className="font-mono text-xs text-faint">awaiting tool calls…</p>
+            ) : (
+              <ToolCallFeed calls={state.tools} />
+            )}
+          </Lane>
+
+          <Lane name="Synthesizer" status={state.synthesizer.status} badge={state.provider ?? undefined}>
+            {state.error ? (
+              <p className="font-mono text-sm text-disputed">⚠ {state.error}</p>
+            ) : state.report ? (
+              <>
+                <Report
+                  report={state.report}
+                  sources={state.sources}
+                  streaming={state.synthesizer.status === "active"}
+                />
+                <SourceList sources={state.sources} />
+              </>
+            ) : (
+              <p className="font-mono text-xs text-faint">
+                {state.synthesizer.status === "active" ? "composing…" : "waiting for findings…"}
+              </p>
+            )}
+          </Lane>
+        </>
+      )}
     </section>
   );
+}
+
+function badgeFor(provider: string): string {
+  return provider === "mock-1" ? "mock mode" : provider;
 }
 
 function QuestionInput({
@@ -138,10 +203,7 @@ function QuestionInput({
   return (
     <div className="rounded-xl border border-border bg-surface/70 p-4 backdrop-blur">
       <div className="mb-2 flex items-center justify-between">
-        <label
-          htmlFor="question"
-          className="font-mono text-[11px] uppercase tracking-widest text-muted"
-        >
+        <label htmlFor="question" className="font-mono text-[11px] uppercase tracking-widest text-muted">
           research question
         </label>
         <span className="font-mono text-[11px] tracking-wide text-faint">⌘/Ctrl + ⏎</span>
@@ -184,42 +246,45 @@ function QuestionInput({
   );
 }
 
-function AgentLane({ state, running }: { state: ConsoleState; running: boolean }) {
-  const isIdle = state.status === "idle" && !state.text && !state.error;
-
+function Lane({
+  name,
+  status,
+  label,
+  badge,
+  children,
+}: {
+  name: string;
+  status: LaneStatus;
+  label?: string;
+  badge?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-xl border border-border bg-surface/40 p-5 backdrop-blur">
       <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
         <div className="flex items-center gap-2.5">
-          <StatusDot status={state.status} />
-          <span className="font-display text-sm font-medium tracking-wide text-text">
-            Synthesizer
+          <StatusDot status={status} />
+          <span className="font-display text-sm font-medium tracking-wide text-text">{name}</span>
+          <span className="font-mono text-[10px] uppercase tracking-widest text-faint">
+            {label ?? status}
           </span>
-          <StatusTag status={state.status} />
         </div>
-        {state.provider ? (
-          <span className="font-mono text-[11px] tracking-wide text-faint">{state.provider}</span>
-        ) : null}
+        {badge ? <span className="font-mono text-[11px] tracking-wide text-faint">{badge}</span> : null}
       </div>
-
-      {isIdle ? (
-        <IdleState />
-      ) : state.error ? (
-        <p className="font-mono text-sm leading-relaxed text-disputed">⚠ {state.error}</p>
-      ) : (
-        <div className={`report-body text-text ${running ? "caret" : ""}`}>{state.text}</div>
-      )}
+      {children}
     </div>
   );
 }
 
-function IdleState() {
+function IdlePanel() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-      <span className="inline-block h-2 w-2 rounded-full bg-accent-dim pulse" aria-hidden />
-      <p className="font-mono text-xs uppercase tracking-widest text-faint">
-        control room idle — run a question to begin
-      </p>
+    <div className="rounded-xl border border-border bg-surface/40 p-5 backdrop-blur">
+      <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <span className="inline-block h-2 w-2 rounded-full bg-accent-dim pulse" aria-hidden />
+        <p className="font-mono text-xs uppercase tracking-widest text-faint">
+          control room idle — run a question to begin
+        </p>
+      </div>
     </div>
   );
 }
@@ -234,18 +299,4 @@ function StatusDot({ status }: { status: LaneStatus }) {
           ? "bg-disputed"
           : "bg-faint";
   return <span className={`inline-block h-2 w-2 rounded-full ${color}`} aria-hidden />;
-}
-
-function StatusTag({ status }: { status: LaneStatus }) {
-  const label: Record<LaneStatus, string> = {
-    idle: "queued",
-    active: "active",
-    done: "done",
-    error: "error",
-  };
-  return (
-    <span className="font-mono text-[10px] uppercase tracking-widest text-faint">
-      {label[status]}
-    </span>
-  );
 }

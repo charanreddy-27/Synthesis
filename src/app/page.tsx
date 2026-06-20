@@ -31,7 +31,7 @@ function TopBar() {
       </div>
       <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-muted">
         <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent pulse" aria-hidden />
-        <span>P0 · skeleton</span>
+        <span>P1 · tools</span>
       </div>
     </header>
   );
