@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+
+  /* warm, dense control-room base — not pure black, not neon */
+  --color-bg: #0e0d0b;
+  --color-surface: #16140f;
+  --color-surface-2: #1d1a14;
+  --color-border: #2a261e;
+  --color-text: #ece7dc;
+  --color-muted: #9a9182;
+  --color-faint: #6b6557;
+
+  /* one confident accent for the active agent */
+  --color-accent: #e0a25e;
+  --color-accent-dim: #8a6a3f;
+
+  /* semantic confidence palette (wired in P4) */
+  --color-supported: #82a877;
+  --color-uncertain: #d9a648;
+  --color-disputed: #cf6f5b;
+}
+
+html,
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* faint engineered grid backdrop */
+.bg-grid {
+  background-image: linear-gradient(
+      to right,
+      color-mix(in oklab, var(--color-border) 55%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-border) 55%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 46px 46px;
+}
+
+.report-body {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.72;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.78);
+  }
+}
+
+.pulse {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.caret::after {
+  content: "";
+  display: inline-block;
+  width: 0.5ch;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background-color: var(--color-accent);
+  animation: caret-blink 1s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse,
+  .caret::after {
+    animation: none;
+  }
+}
