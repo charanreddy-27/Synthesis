@@ -28,6 +28,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# persisted runs (file-backed run store)
+/.data
+
 # editor
 .vscode/*
 !.vscode/extensions.json

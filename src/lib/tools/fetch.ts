@@ -1,4 +1,4 @@
-import { extractTitle, htmlToText } from "@/lib/text";
+import { extractTitle, htmlToText } from "../text";
 
 export interface FetchedPage {
   url: string;

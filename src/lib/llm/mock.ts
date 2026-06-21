@@ -5,41 +5,81 @@ import type {
   LlmStreamOptions,
 } from "./types";
 
-const SAMPLE = `Synthesis is running in mock mode because no GOOGLE_API_KEY was provided.
-
-This is the P0 skeleton: your question reached a single Synthesizer agent, and these tokens are streaming back to the control room over Server-Sent Events — the exact transport the full multi-agent graph will use.
-
-Drop a GOOGLE_API_KEY into .env.local to swap in real Gemini reasoning. The next phases add SearXNG-powered researchers running in parallel, a synthesizer that cites real sources, and a critic agent that verifies every claim and labels its confidence.`;
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * When the prompt carries numbered sources, weave a short answer that cites them by [n]
- * so the offline demo still exercises the real citation → source rendering path.
+ * The mock provider plays every agent role offline by keying on stable phrases in the prompt:
+ * the Planner JSON, the Critic JSON, and the Synthesizer's cited report. It lets the entire
+ * multi-agent graph run — and demo — with no API key.
  */
 function composeMockAnswer(userText: string): string {
+  if (userText.includes('"subQuestions"')) return mockPlan(userText);
+  if (/confidence labels/i.test(userText) || /"confidence"/.test(userText)) return mockCritic(userText);
+
   const citations = [...new Set([...userText.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])))]
     .filter((n) => n >= 1)
     .sort((a, b) => a - b);
+  if (citations.length > 0) return mockReport(citations, /Revision required/i.test(userText));
 
-  if (citations.length === 0) {
-    return SAMPLE;
+  return "Synthesis is running in mock mode. Add a GOOGLE_API_KEY to .env.local for real Gemini reasoning.";
+}
+
+function mockPlan(userText: string): string {
+  const question = (userText.match(/Question:\s*(.+)/)?.[1] ?? "the topic").trim().replace(/[?.]+$/, "");
+  const subQuestions = [
+    `What is the current state and key facts of ${question}?`,
+    `What evidence, data, or real-world examples illustrate ${question}?`,
+    `What are the main limitations, risks, or bottlenecks of ${question}?`,
+  ];
+  return JSON.stringify({ subQuestions });
+}
+
+function mockCritic(userText: string): string {
+  const count = (userText.match(/^\s*\d+\)\s*Claim:/gm) ?? []).length || 1;
+  const labels = Array.from({ length: count }, (_, i) => {
+    const index = i + 1;
+    let confidence: "supported" | "single-source" | "disputed";
+    let note: string;
+    if (index === 1) {
+      confidence = "supported";
+      note = "corroborated by multiple cited passages";
+    } else if (index === count && count >= 2) {
+      confidence = "disputed";
+      note = "the cited passage does not directly establish this claim";
+    } else {
+      confidence = "single-source";
+      note = "rests on a single cited passage";
+    }
+    return { index, confidence, note };
+  });
+  return JSON.stringify(labels);
+}
+
+function mockReport(citations: number[], isRevision: boolean): string {
+  const [first, second, ...rest] = citations;
+  const lines: string[] = ["## Findings"];
+
+  if (second !== undefined) {
+    lines.push(
+      `Across the retrieved sources the evidence converges on a clear, well-attested trend [${first}][${second}].`,
+    );
+  } else {
+    lines.push(`The retrieved source points to a clear trend [${first}].`);
   }
-
-  const sentences = citations.map(
-    (n, i) =>
-      `${i === 0 ? "Drawing on the retrieved sources, the evidence indicates a clear trend" : "A second strand of evidence reinforces this"} [${n}].`,
+  for (const n of rest) {
+    lines.push(`A further line of evidence adds important detail to the picture [${n}].`);
+  }
+  if (citations.length >= 2) {
+    lines.push(
+      `\n## Caveats\nOne strand of the evidence is weaker and should be read with care [${citations[citations.length - 1]}].`,
+    );
+  }
+  lines.push(
+    `\n_${isRevision ? "Revised in response to critic feedback. " : ""}Assembled by the mock provider from ${citations.length} source(s); add a GOOGLE_API_KEY for genuine Gemini synthesis._`,
   );
-
-  return [
-    "## Synthesized answer _(mock mode)_",
-    "",
-    sentences.join(" "),
-    "",
-    `This response was assembled by the mock provider from ${citations.length} retrieved source(s); every claim is tied to a citation above. Add a GOOGLE_API_KEY to .env.local for genuine Gemini synthesis.`,
-  ].join("\n");
+  return lines.join("\n");
 }
 
 export class MockProvider implements LlmProvider {
@@ -57,7 +97,7 @@ export class MockProvider implements LlmProvider {
 
     for (const token of tokens) {
       if (options.signal?.aborted) return;
-      await delay(14);
+      await delay(10);
       yield { text: token };
     }
   }

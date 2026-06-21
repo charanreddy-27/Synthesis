@@ -101,3 +101,25 @@ body {
     animation: none;
   }
 }
+
+@media print {
+  .print-hide {
+    display: none !important;
+  }
+  .bg-grid {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff;
+    color: #111;
+  }
+  .report-body,
+  .report-body * {
+    color: #111 !important;
+  }
+  a {
+    color: #111 !important;
+    text-decoration: underline;
+  }
+}
