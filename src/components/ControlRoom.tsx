@@ -184,8 +184,14 @@ export function ControlRoom({ defaultQuestion }: { defaultQuestion: string }) {
       ) : (
         <>
           {state.error ? (
-            <p className="rounded-xl border border-disputed/40 bg-disputed/10 p-4 font-mono text-sm text-disputed">
-              ⚠ {state.error}
+            <p
+              role="alert"
+              className="flex items-start gap-2.5 rounded-xl border border-disputed/40 bg-disputed/10 p-4 font-mono text-sm text-disputed"
+            >
+              <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+              </svg>
+              <span>{state.error}</span>
             </p>
           ) : null}
           <div className="print-hide space-y-4">
@@ -249,7 +255,7 @@ function QuestionInput({
           <button
             type="button"
             onClick={onStop}
-            className="rounded-md border border-border px-4 py-1.5 font-mono text-xs uppercase tracking-widest text-muted transition-colors hover:bg-surface-2 hover:text-text"
+            className="cursor-pointer rounded-md border border-border px-4 py-1.5 font-mono text-xs uppercase tracking-widest text-muted transition-colors hover:bg-surface-2 hover:text-text"
           >
             Stop
           </button>
@@ -258,9 +264,16 @@ function QuestionInput({
           type="button"
           onClick={onRun}
           disabled={running || question.trim().length < 3}
-          className="rounded-md bg-accent px-5 py-1.5 font-mono text-xs font-semibold uppercase tracking-widest text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-accent px-5 py-1.5 font-mono text-xs font-semibold uppercase tracking-widest text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {running ? "Running" : "Run"}
+          {running ? (
+            <>
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-bg pulse" aria-hidden />
+              Running
+            </>
+          ) : (
+            "Run"
+          )}
         </button>
       </div>
     </div>

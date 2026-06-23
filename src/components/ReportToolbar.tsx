@@ -65,7 +65,7 @@ export function ReportToolbar({
           type="button"
           onClick={exportMarkdown}
           disabled={!report}
-          className="rounded border border-border px-2.5 py-1 uppercase tracking-widest text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:opacity-40"
+          className="cursor-pointer rounded border border-border px-2.5 py-1 uppercase tracking-widest text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
           .md
         </button>
@@ -73,7 +73,7 @@ export function ReportToolbar({
           type="button"
           onClick={() => window.print()}
           disabled={!report}
-          className="rounded border border-border px-2.5 py-1 uppercase tracking-widest text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:opacity-40"
+          className="cursor-pointer rounded border border-border px-2.5 py-1 uppercase tracking-widest text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
         >
           print
         </button>
@@ -81,7 +81,7 @@ export function ReportToolbar({
           <button
             type="button"
             onClick={copyShare}
-            className="rounded border border-accent/40 bg-accent/10 px-2.5 py-1 uppercase tracking-widest text-accent transition-colors hover:bg-accent/20"
+            className="cursor-pointer rounded border border-accent/40 bg-accent/10 px-2.5 py-1 uppercase tracking-widest text-accent transition-colors hover:bg-accent/20"
           >
             {copied ? "copied" : "share"}
           </button>

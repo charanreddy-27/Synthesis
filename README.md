@@ -2,10 +2,27 @@
 
 **An autonomous multi-agent research engine with a live "agent control room."**
 
+<p>
+  <a href="https://synthesis-charan.vercel.app"><strong>▶ Live demo</strong></a> ·
+  <a href="./PROJECT_DEEP_DIVE.md">Deep dive</a> ·
+  <a href="./DEPLOYMENT.md">Deploy</a> ·
+  <a href="https://www.charanreddy.dev">Portfolio</a>
+</p>
+
+![Next.js](https://img.shields.io/badge/Next.js-15-000?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google-Gemini-8E75B2?logo=googlegemini&logoColor=white)
+![MCP](https://img.shields.io/badge/Model_Context_Protocol-server-444)
+
 Ask any real question. Watch a team of AI agents _plan → search → read → cross-check → verify →
 synthesize_ a fully cited report — live. The product **is** the visualization of the agent graph:
 sub-questions fan out to parallel researchers, tool calls land in real time, a critic flags weak
 claims, and a report assembles itself with inline citations, confidence labels, and an evidence graph.
+
+> _**Screenshot / GIF goes here** — drop a recording of a live run into `docs/` and reference it (e.g._
+> _`![Synthesis control room](docs/control-room.gif)`). A short clip of the lanes filling in and the_
+> _report typing itself is the single highest-leverage thing you can add to this README._
 
 > **Status: complete (P0–P6).** Planner → parallel Researchers → Synthesizer ⇄ Critic, streamed over
 > SSE, with a cited report, per-claim confidence, an evidence graph, shareable run URLs, a cost
@@ -166,4 +183,24 @@ Next.js (App Router) · TypeScript (strict) · Tailwind v4 · Server-Sent Events
 
 Design direction: a warm, dense **mission-ops** aesthetic — Space Grotesk console chrome, Newsreader
 serif report body, JetBrains Mono labels, one amber accent for the active agent, and a semantic
-palette for claim confidence.
+palette for claim confidence. There's a short tour of the *why* and the build at
+[`/about-project`](https://synthesis-charan.vercel.app/about-project).
+
+---
+
+## About the developer
+
+**Chanda Charan Reddy** — AI & Automation Engineer, Bangalore.
+
+I ship production LLM systems: a Springer-published model that reads chest X-rays well enough for a
+radiologist to take seriously, document pipelines that quietly run themselves, and — before any of
+that — real-time control code for jet engines at DRDO. Synthesis is what happens when you point that
+*don't-trust-output-you-can't-trace* instinct at language models.
+
+- **Portfolio** — [charanreddy.dev](https://www.charanreddy.dev)
+- **GitHub** — [@charanreddy-27](https://github.com/charanreddy-27)
+- **LinkedIn** — [chandacharanreddy](https://www.linkedin.com/in/chandacharanreddy/)
+- **Book a call** — [cal.com/charanreddy-27/30min](https://cal.com/charanreddy-27/30min)
+
+> Want to build something — or break something interesting? This is one project; there are 18 more
+> (and a few jet engines) over at [charanreddy.dev](https://www.charanreddy.dev). _Let's talk._
